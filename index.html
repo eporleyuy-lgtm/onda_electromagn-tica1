@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Ondas Electromagnéticas - Cargas Oscilantes</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+        }
+        canvas {
+            touch-action: none;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col overflow-hidden bg-slate-950 text-slate-100">
+
+    <!-- Header / Navbar -->
+    <header class="h-14 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-cyan-500/10 p-2 rounded-lg border border-cyan-500/30 text-cyan-400">
+                <i class="fa-solid font-bold fa-wave-square text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold leading-none text-slate-100">Simulador de Ondas Electromagnéticas</h1>
+                <p class="text-xs text-slate-400">Modelo Interactivo PhET - Cargas, Campo E y Campo B</p>
+            </div>
+        </div>
+
+        <!-- Estado de la simulación -->
+        <div class="flex items-center space-x-2">
+            <button id="btn-play-pause" class="flex items-center space-x-2 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-md text-xs font-medium transition shadow-sm">
+                <i id="icon-play-pause" class="fa-solid fa-pause"></i>
+                <span id="label-play-pause">Pausar</span>
+            </button>
+            <button id="btn-reset" class="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-xs font-medium transition border border-slate-700">
+                <i class="fa-solid fa-rotate-left"></i>
+                <span>Reiniciar</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+
+        <!-- Left / Controls Sidebar -->
+        <aside class="w-full md:w-80 border-r border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-5 overflow-y-auto shrink-0 z-10">
+            
+            <!-- Modo del Transmisor -->
+            <div class="space-y-2">
+                <label class="text-xs font-semibold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+                    <i class="fa-solid fa-tower-broadcast text-cyan-400"></i> Modo del Transmisor
+                </label>
+                <div class="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                    <button id="mode-oscillation" class="mode-btn px-2 py-1.5 text-xs rounded font-medium bg-cyan-600 text-white shadow-sm transition">
+                        Oscilar
+                    </button>
+                    <button id="mode-manual" class="mode-btn px-2 py-1.5 text-xs rounded font-medium text-slate-400 hover:text-slate-200 transition">
+                        Manual
+                    </button>
+                    <button id="mode-pulse" class="mode-btn px-2 py-1.5 text-xs rounded font-medium text-slate-400 hover:text-slate-200 transition">
+                        Impulso
+                    </button>
+                </div>
+                <p id="mode-desc" class="text-[11px] text-slate-400 italic px-1">Oscilación armónica sinusoidal del electrón.</p>
+            </div>
+
+            <!-- Parámetros de Oscilación -->
+            <div class="space-y-4 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <h3 class="text-xs font-semibold text-slate-300 flex justify-between items-center">
+                    <span>Parámetros de Fuente</span>
+                    <span id="pulse-btn-container" class="hidden">
+                        <button id="btn-send-pulse" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] rounded font-semibold transition">
+                            Disparar
+                        </button>
+                    </span>
+                </h3>
+
+                <!-- Frecuencia Slider -->
+                <div class="space-y-1" id="freq-container">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Espectro EM / Frecuencia</span>
+                        <span id="freq-val" class="text-cyan-400 font-mono font-bold">100 MHz (Radio FM)</span>
+                    </div>
+                    <input type="range" id="slider-freq" min="0" max="4" step="1" value="1" class="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-[9px] text-slate-500 px-0.5">
+                        <span>AM</span>
+                        <span>FM</span>
+                        <span>Wi-Fi</span>
+                        <span>Radar</span>
+                        <span>IR</span>
+                    </div>
+                </div>
+
+                <!-- Amplitud Slider -->
+                <div class="space-y-1" id="amp-container">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Amplitud de Oscilación (A)</span>
+                        <span id="amp-val" class="text-cyan-400 font-mono font-bold">40 px</span>
+                    </div>
+                    <input type="range" id="slider-amp" min="10" max="70" step="5" value="40" class="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Visualización del Campo E y B -->
+            <div class="space-y-2">
+                <label class="text-xs font-semibold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+                    <i class="fa-solid fa-eye text-emerald-400"></i> Vistas del Campo (E y B)
+                </label>
+                <div class="flex flex-col gap-1.5">
+                    <label class="flex items-center space-x-2 text-xs bg-slate-950/50 p-2 rounded-lg border border-slate-800/80 hover:border-slate-700 cursor-pointer">
+                        <input type="radio" name="view-mode" value="line" checked class="accent-cyan-500">
+                        <span>Onda continua (Línea transversal)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 text-xs bg-slate-950/50 p-2 rounded-lg border border-slate-800/80 hover:border-slate-700 cursor-pointer">
+                        <input type="radio" name="view-mode" value="vectors" class="accent-cyan-500">
+                        <span>Vectores discretos (Campo E con flechas)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 text-xs bg-slate-950/50 p-2 rounded-lg border border-slate-800/80 hover:border-slate-700 cursor-pointer">
+                        <input type="radio" name="view-mode" value="grid" class="accent-cyan-500">
+                        <span>Malla 2D de Campo B (Puntos y Cruces en todo el plano)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Configuración del Tiempo -->
+            <div class="space-y-4 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <h3 class="text-xs font-semibold text-slate-300">Tiempo y Distancia</h3>
+
+                <!-- Distancia -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Distancia Receptor</span>
+                        <span id="dist-val" class="text-cyan-400 font-mono font-bold">500 px</span>
+                    </div>
+                    <input type="range" id="slider-dist" min="200" max="800" step="10" value="500" class="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Cámara Lenta -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400 flex items-center gap-1">
+                            <i class="fa-solid fa-gauge-high text-amber-400"></i> Cámara Lenta
+                        </span>
+                        <span id="time-speed-val" class="text-amber-400 font-mono font-bold">0.30x (Lento)</span>
+                    </div>
+                    <input type="range" id="slider-time-speed" min="0.05" max="1.0" step="0.05" value="0.3" class="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div class="space-y-1 bg-slate-900/80 p-2 rounded-lg border border-slate-800 text-[11px] text-slate-400">
+                    <div class="flex items-center justify-between">
+                        <span>Velocidad de propagación:</span>
+                        <span class="font-mono text-cyan-400 font-semibold">c = constante</span>
+                    </div>
+                    <div id="real-freq-note" class="text-[10px] text-slate-500 italic pt-1 border-t border-slate-800/60">
+                        Frecuencia real: <span class="text-slate-300 font-mono">100 MHz</span> | Frecuencia visualizada: <span class="text-slate-300 font-mono">0.6 Hz</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leyenda -->
+            <div class="mt-auto bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-[11px] space-y-2">
+                <div class="font-bold text-slate-300 border-b border-slate-800 pb-1">Leyenda Física</div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-cyan-400 inline-block shadow-sm"></span>
+                    <span class="text-slate-400">Electrones (-e)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-0.5 bg-emerald-400 inline-block"></span>
+                    <span class="text-slate-400">Campo Eléctrico (E) [Vertical]</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-amber-400 font-bold text-xs inline-block w-3 text-center">⊙ / ⊗</span>
+                    <span class="text-slate-400">Campo Magnético (B) [⊙ sale, ⊗ entra]</span>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Canvas Area -->
+        <main class="flex-1 flex flex-col relative bg-slate-950 overflow-hidden">
+            <div id="canvas-container" class="flex-1 relative w-full h-full cursor-default">
+                <canvas id="simCanvas" class="absolute inset-0 w-full h-full"></canvas>
+
+                <div id="manual-hint" class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 bg-cyan-900/80 text-cyan-200 border border-cyan-500/50 text-xs px-3 py-1.5 rounded-full shadow-lg backdrop-blur pointer-events-none transition">
+                    <i class="fa-solid fa-hand-pointer mr-1"></i> Arrastra el electrón emisor verticalmente
+                </div>
+            </div>
+
+            <!-- Real-time Data Bar -->
+            <div class="h-14 border-t border-slate-800 bg-slate-900/90 backdrop-blur px-6 flex items-center justify-between shrink-0 text-xs">
+                <div class="flex items-center space-x-6">
+                    <div>
+                        <div class="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Aceleración (a)</div>
+                        <div id="data-accel" class="font-mono text-cyan-400 font-semibold text-sm">0.00 px/s²</div>
+                    </div>
+                    <div class="border-r border-slate-800 h-8"></div>
+                    <div>
+                        <div class="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Campo E en Receptor</div>
+                        <div id="data-e-field" class="font-mono text-emerald-400 font-semibold text-sm">0.00 N/C</div>
+                    </div>
+                    <div class="border-r border-slate-800 h-8"></div>
+                    <div>
+                        <div class="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Retardo de fase (Δt)</div>
+                        <div id="data-delay" class="font-mono text-amber-400 font-semibold text-sm">0.00 s</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const FREQUENCY_SPECTRUM = [
+            { label: '1 MHz (Radio AM)', realFreq: '1 MHz', visualFreq: 0.3 },
+            { label: '100 MHz (Radio FM)', realFreq: '100 MHz', visualFreq: 0.6 },
+            { label: '2.4 GHz (Wi-Fi / TV)', realFreq: '2.4 GHz', visualFreq: 1.0 },
+            { label: '10 GHz (Radar)', realFreq: '10 GHz', visualFreq: 1.4 },
+            { label: '300 GHz (Infrarrojo)', realFreq: '300 GHz', visualFreq: 2.0 }
+        ];
+
+        const config = {
+            c: 220,
+            freqIndex: 1,
+            visualFreq: 0.6,
+            amplitude: 40,
+            antennaX: 120,
+            receiverDist: 500,
+            historyMaxTime: 12.0
+        };
+
+        const state = {
+            isRunning: true,
+            timeScale: 0.3,
+            mode: 'oscillation',
+            viewMode: 'line',
+            time: 0,
+            lastFrameTime: performance.now(),
+            txPosY: 0,
+            txVelY: 0,
+            txAccelY: 0,
+            isDragging: false,
+            history: [],
+            pulseActive: false,
+            pulseStartTime: 0
+        };
+
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        const btnPlayPause = document.getElementById('btn-play-pause');
+        const iconPlayPause = document.getElementById('icon-play-pause');
+        const labelPlayPause = document.getElementById('label-play-pause');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const sliderFreq = document.getElementById('slider-freq');
+        const freqVal = document.getElementById('freq-val');
+        const realFreqNote = document.getElementById('real-freq-note');
+        const sliderAmp = document.getElementById('slider-amp');
+        const ampVal = document.getElementById('amp-val');
+        const sliderDist = document.getElementById('slider-dist');
+        const distVal = document.getElementById('dist-val');
+
+        const sliderTimeSpeed = document.getElementById('slider-time-speed');
+        const timeSpeedVal = document.getElementById('time-speed-val');
+
+        const modeOsc = document.getElementById('mode-oscillation');
+        const modeMan = document.getElementById('mode-manual');
+        const modePulse = document.getElementById('mode-pulse');
+        const modeDesc = document.getElementById('mode-desc');
+        const manualHint = document.getElementById('manual-hint');
+        const pulseBtnContainer = document.getElementById('pulse-btn-container');
+        const btnSendPulse = document.getElementById('btn-send-pulse');
+
+        const dataAccel = document.getElementById('data-accel');
+        const dataEField = document.getElementById('data-e-field');
+        const dataDelay = document.getElementById('data-delay');
+
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function recordHistory(t, y, v, a) {
+            state.history.push({ t, y, v, a });
+            const cutoff = t - config.historyMaxTime;
+            while (state.history.length > 0 && state.history[0].t < cutoff) {
+                state.history.shift();
+            }
+        }
+
+        function getTxStateAt(retardedTime) {
+            if (state.history.length === 0) return { y: 0, v: 0, a: 0 };
+            
+            if (retardedTime <= state.history[0].t) {
+                return { y: state.history[0].y, v: state.history[0].v, a: state.history[0].a };
+            }
+
+            for (let i = state.history.length - 1; i >= 0; i--) {
+                if (state.history[i].t <= retardedTime) {
+                    if (i === state.history.length - 1) {
+                        return { y: state.history[i].y, v: state.history[i].v, a: state.history[i].a };
+                    }
+                    const h1 = state.history[i];
+                    const h2 = state.history[i + 1];
+                    const factor = (retardedTime - h1.t) / (h2.t - h1.t);
+                    return {
+                        y: h1.y + factor * (h2.y - h1.y),
+                        v: h1.v + factor * (h2.v - h1.v),
+                        a: h1.a + factor * (h2.a - h1.a)
+                    };
+                }
+            }
+            return { y: 0, v: 0, a: 0 };
+        }
+
+        function updatePhysics(dt) {
+            if (!state.isRunning) return;
+
+            const scaledDt = dt * state.timeScale;
+            state.time += scaledDt;
+            
+            const omega = 2 * Math.PI * config.visualFreq;
+
+            if (state.mode === 'oscillation') {
+                state.txPosY = config.amplitude * Math.sin(omega * state.time);
+                state.txVelY = config.amplitude * omega * Math.cos(omega * state.time);
+                state.txAccelY = -config.amplitude * omega * omega * Math.sin(omega * state.time);
+            } else if (state.mode === 'pulse') {
+                if (state.pulseActive) {
+                    const elapsed = state.time - state.pulseStartTime;
+                    const duration = 1.0 / config.visualFreq;
+                    if (elapsed <= duration) {
+                        const pulsePhase = (elapsed / duration) * 2 * Math.PI;
+                        const envelope = Math.sin(Math.PI * (elapsed / duration));
+                        state.txPosY = config.amplitude * Math.sin(pulsePhase) * envelope;
+                        state.txAccelY = -config.amplitude * Math.pow(2 * Math.PI / duration, 2) * Math.sin(pulsePhase) * envelope;
+                    } else {
+                        state.txPosY = 0;
+                        state.txVelY = 0;
+                        state.txAccelY = 0;
+                        state.pulseActive = false;
+                    }
+                } else {
+                    state.txPosY = 0;
+                    state.txVelY = 0;
+                    state.txAccelY = 0;
+                }
+            }
+
+            recordHistory(state.time, state.txPosY, state.txVelY, state.txAccelY);
+        }
+
+        function updateDataDisplay(eFieldAtRx) {
+            dataAccel.textContent = `${state.txAccelY.toFixed(1)} px/s²`;
+            dataEField.textContent = `${(-eFieldAtRx).toFixed(2)} N/C`;
+            const delay = config.receiverDist / config.c;
+            dataDelay.textContent = `${delay.toFixed(2)} s`;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const centerY = canvas.height / 2;
+            const txX = config.antennaX;
+            const rxX = txX + config.receiverDist;
+
+            drawGrid(centerY);
+            drawAntenna(txX, centerY, "Antena Emisora (TX)");
+            drawAntenna(rxX, centerY, "Antena Receptora (RX)");
+
+            if (state.viewMode === 'grid') {
+                drawFullFieldGrid(txX, centerY);
+            } else if (state.viewMode === 'vectors') {
+                drawVectorField(txX, centerY);
+            } else if (state.viewMode === 'line') {
+                drawLineWave(txX, centerY);
+            }
+
+            const retardedTimeRx = state.time - (config.receiverDist / config.c);
+            const txStateRx = getTxStateAt(retardedTimeRx);
+            
+            const distAttenuation = Math.max(0.4, 1 - (config.receiverDist / 1600));
+            const eFieldAtRx = - (txStateRx.a * 0.05) * distAttenuation;
+
+            const txY = centerY - state.txPosY;
+            drawCharge(txX, txY, '#00f3ff', '-e', state.isDragging);
+
+            const rxY = centerY - (txStateRx.y * distAttenuation);
+            drawCharge(rxX, rxY, '#38bdf8', '-e', false);
+
+            const vectorScale = 4;
+            drawVector(rxX, rxY, 0, -eFieldAtRx * vectorScale, '#f43f5e', 'Fuerza (qE)');
+            drawVector(rxX, rxY, 0, eFieldAtRx * vectorScale, '#10b981', 'E(t)');
+
+            updateDataDisplay(eFieldAtRx);
+        }
+
+        function drawGrid(centerY) {
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            ctx.setLineDash([4, 4]);
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(canvas.width, centerY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawAntenna(x, centerY, label) {
+            const height = 200;
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(x, centerY - height / 2);
+            ctx.lineTo(x, centerY + height / 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 11px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x, centerY + height / 2 + 20);
+        }
+
+        function drawCharge(x, y, color, symbol, isHighlighted) {
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = isHighlighted ? 15 : 10;
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 9px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+
+            ctx.restore();
+        }
+
+        // Función principal para dibujar un vector con punta de flecha clara
+        function drawVector(x, y, dx, dy, color, label) {
+            const length = Math.hypot(dx, dy);
+            if (length < 1.5) return;
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2;
+
+            const endX = x + dx;
+            const endY = y + dy;
+
+            // Cuerpo del vector
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            // Punta de la flecha
+            const arrowHeadSize = Math.min(7, Math.max(4, length * 0.35));
+            const angle = Math.atan2(dy, dx);
+
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(
+                endX - arrowHeadSize * Math.cos(angle - Math.PI / 6),
+                endY - arrowHeadSize * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                endX - arrowHeadSize * Math.cos(angle + Math.PI / 6),
+                endY - arrowHeadSize * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fill();
+
+            if (label && length > 12) {
+                ctx.font = '600 10px Inter';
+                ctx.fillText(label, endX + 8, endY + 3);
+            }
+
+            ctx.restore();
+        }
+
+        // Modo 1: Onda continua (línea transversal)
+        function drawLineWave(txX, centerY) {
+            ctx.save();
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+
+            let started = false;
+            for (let x = txX; x < canvas.width; x += 3) {
+                const dist = x - txX;
+                const retardedTime = state.time - (dist / config.c);
+                const txState = getTxStateAt(retardedTime);
+
+                const distAttenuation = Math.max(0.4, 1 - (dist / 1600));
+                const y = centerY - (txState.y * distAttenuation);
+
+                if (!started) {
+                    ctx.moveTo(x, y);
+                    started = true;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Modo 2: Vectores discretos de Campo E a lo largo de la línea de propagación
+        function drawVectorField(txX, centerY) {
+            const spacing = 24;
+            for (let x = txX + 15; x < canvas.width; x += spacing) {
+                const dist = x - txX;
+                const retardedTime = state.time - (dist / config.c);
+                const txState = getTxStateAt(retardedTime);
+
+                const distAttenuation = Math.max(0.4, 1 - (dist / 1600));
+                const eFieldVal = -(txState.a * 0.05) * distAttenuation;
+                const dy = -eFieldVal * 3.5;
+
+                if (Math.abs(dy) > 1.5) {
+                    drawVector(x, centerY, 0, dy, '#10b981', null);
+                }
+            }
+        }
+
+        // Modo 3: Malla 2D completa del Campo Magnético B (Puntos ⊙ y Cruces ⊗) cubriendo todo el espacio
+        function drawFullFieldGrid(txX, centerY) {
+            const stepX = 32;
+            const stepY = 32;
+
+            for (let x = txX + 25; x < canvas.width; x += stepX) {
+                const dist = x - txX;
+                
+                for (let y = stepY; y < canvas.height; y += stepY) {
+                    const dyPos = y - centerY;
+                    const r = Math.hypot(dist, dyPos);
+                    const angle = Math.atan2(dyPos, dist);
+
+                    // El campo en radiación varía como sin(theta)/r en 2D
+                    const sinTheta = Math.abs(Math.cos(angle));
+                    const retardedTime = state.time - (r / config.c);
+                    const txState = getTxStateAt(retardedTime);
+
+                    const distFactor = Math.max(0.15, 1 - (r / 1500));
+                    // El campo magnético B oscila en fase con el campo E pero perpendicular al plano de oscilación
+                    const bFieldVal = (txState.y * sinTheta * distFactor);
+
+                    if (Math.abs(bFieldVal) > 1.2) {
+                        drawMagneticSymbol(x, y, bFieldVal);
+                    }
+                }
+            }
+        }
+
+        // Símbolos de Notación Vectorial 3D para el Campo Magnético B (Entrando ⊗ / Saliendo ⊙)
+        function drawMagneticSymbol(x, y, value) {
+            ctx.save();
+            const intensity = Math.min(1, Math.abs(value) / 35);
+            const radius = Math.min(8, Math.max(4, 4 + intensity * 4));
+            
+            if (value > 0) {
+                // Campo Magnético saliendo de la pantalla (Punto: ⊙)
+                ctx.strokeStyle = `rgba(251, 191, 36, ${Math.max(0.35, intensity)})`;
+                ctx.fillStyle = `rgba(251, 191, 36, ${Math.max(0.35, intensity)})`;
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Campo Magnético entrando a la pantalla (Cruz: ⊗)
+                ctx.strokeStyle = `rgba(245, 158, 11, ${Math.max(0.35, intensity)})`;
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                const r = radius * 0.6;
+                ctx.beginPath();
+                ctx.moveTo(x - r, y - r);
+                ctx.lineTo(x + r, y + r);
+                ctx.moveTo(x + r, y - r);
+                ctx.lineTo(x - r, y + r);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function animate(timestamp) {
+            const dt = (timestamp - state.lastFrameTime) / 1000;
+            state.lastFrameTime = timestamp;
+
+            const clampedDt = Math.min(dt, 0.033);
+
+            updatePhysics(clampedDt);
+            draw();
+
+            requestAnimationFrame(animate);
+        }
+
+        btnPlayPause.addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            iconPlayPause.className = state.isRunning ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+            labelPlayPause.textContent = state.isRunning ? 'Pausar' : 'Reanudar';
+        });
+
+        btnReset.addEventListener('click', () => {
+            state.time = 0;
+            state.history = [];
+            state.txPosY = 0;
+            state.txVelY = 0;
+            state.txAccelY = 0;
+            state.pulseActive = false;
+        });
+
+        sliderFreq.addEventListener('input', (e) => {
+            config.freqIndex = parseInt(e.target.value);
+            const item = FREQUENCY_SPECTRUM[config.freqIndex];
+            config.visualFreq = item.visualFreq;
+            freqVal.textContent = item.label;
+            realFreqNote.innerHTML = `Frecuencia real: <span class="text-slate-300 font-mono">${item.realFreq}</span> | Frecuencia visualizada: <span class="text-slate-300 font-mono">${item.visualFreq.toFixed(1)} Hz</span>`;
+        });
+
+        sliderAmp.addEventListener('input', (e) => {
+            config.amplitude = parseFloat(e.target.value);
+            ampVal.textContent = `${config.amplitude} px`;
+        });
+
+        sliderDist.addEventListener('input', (e) => {
+            config.receiverDist = parseFloat(e.target.value);
+            distVal.textContent = `${config.receiverDist} px`;
+        });
+
+        sliderTimeSpeed.addEventListener('input', (e) => {
+            state.timeScale = parseFloat(e.target.value);
+            timeSpeedVal.textContent = `${state.timeScale.toFixed(2)}x`;
+        });
+
+        function setTransmitterMode(mode) {
+            state.mode = mode;
+            [modeOsc, modeMan, modePulse].forEach(btn => {
+                btn.className = 'mode-btn px-2 py-1.5 text-xs rounded font-medium text-slate-400 hover:text-slate-200 transition';
+            });
+
+            manualHint.classList.add('hidden');
+            pulseBtnContainer.classList.add('hidden');
+
+            if (mode === 'oscillation') {
+                modeOsc.className = 'mode-btn px-2 py-1.5 text-xs rounded font-medium bg-cyan-600 text-white shadow-sm transition';
+                modeDesc.textContent = 'Oscilación armónica sinusoidal del electrón.';
+            } else if (mode === 'manual') {
+                modeMan.className = 'mode-btn px-2 py-1.5 text-xs rounded font-medium bg-cyan-600 text-white shadow-sm transition';
+                modeDesc.textContent = 'Arrastra el electrón de la emisora verticalmente.';
+                manualHint.classList.remove('hidden');
+            } else if (mode === 'pulse') {
+                modePulse.className = 'mode-btn px-2 py-1.5 text-xs rounded font-medium bg-cyan-600 text-white shadow-sm transition';
+                modeDesc.textContent = 'Envía un pulso individual haciendo clic en Disparar.';
+                pulseBtnContainer.classList.remove('hidden');
+            }
+        }
+
+        modeOsc.addEventListener('click', () => setTransmitterMode('oscillation'));
+        modeMan.addEventListener('click', () => setTransmitterMode('manual'));
+        modePulse.addEventListener('click', () => setTransmitterMode('pulse'));
+
+        btnSendPulse.addEventListener('click', () => {
+            state.pulseActive = true;
+            state.pulseStartTime = state.time;
+        });
+
+        document.querySelectorAll('input[name="view-mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                state.viewMode = e.target.value;
+            });
+        });
+
+        let lastDragTime = performance.now();
+
+        function handlePointerDown(e) {
+            if (state.mode !== 'manual') return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
+            const centerY = canvas.height / 2;
+            const chargeY = centerY - state.txPosY;
+
+            const dist = Math.hypot(mouseX - config.antennaX, mouseY - chargeY);
+            if (dist < 35) {
+                state.isDragging = true;
+                lastDragTime = performance.now();
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!state.isDragging || state.mode !== 'manual') return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const mouseY = clientY - rect.top;
+            const centerY = canvas.height / 2;
+
+            const now = performance.now();
+            const dt = Math.max(0.005, (now - lastDragTime) / 1000);
+
+            const newPosY = Math.max(-80, Math.min(80, centerY - mouseY));
+            
+            const newVelY = (newPosY - state.txPosY) / dt;
+            state.txAccelY = (newVelY - state.txVelY) / dt;
+            state.txVelY = newVelY;
+            state.txPosY = newPosY;
+
+            lastDragTime = now;
+        }
+
+        function handlePointerUp() {
+            if (state.isDragging) {
+                state.isDragging = false;
+                state.txVelY = 0;
+                state.txAccelY = 0;
+            }
+        }
+
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+
+        canvas.addEventListener('touchstart', handlePointerDown, { passive: true });
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: true });
+        window.addEventListener('touchend', handlePointerUp);
+
+        window.onload = function() {
+            state.lastFrameTime = performance.now();
+            requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>
